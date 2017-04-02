@@ -8,17 +8,16 @@
 
 #include <iostream>
 #include <boost/shared_ptr.hpp>
-#include "Connection.h"
-#include "IOServiceAgent.h"
-#include "IServer.h"
+#include <sdo/net/Connection.h>
+#include <sdo/net/IOServiceAgent.h>
+#include <sdo/server/BaseServer.h>
 using namespace std;
-using namespace com::sdo::net;
-using namespace com::sdo;
+using namespace sdo::net;
 int main() {
 	boost::shared_ptr<IOServiceAgent> io_agent(new IOServiceAgent);
 	io_agent->init(5,5);
 	io_service io_ser;
-	IServer server(io_ser,io_agent,6789);
+	sdo::server::BaseServer server(io_ser,io_agent,8081,10000);
 	server.start();
 	io_ser.run();
 //	while(true){
