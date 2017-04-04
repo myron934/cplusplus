@@ -5,8 +5,8 @@
  *      Author: myron
  */
 
-#ifndef IOSERVICEAGENT_H_
-#define IOSERVICEAGENT_H_
+#ifndef SDO_NET_IOSERVICEAGENT_H_
+#define SDO_NET_IOSERVICEAGENT_H_
 
 #include <vector>
 #include <boost/asio.hpp>
@@ -25,6 +25,7 @@ public:
 	IOServiceAgent(unsigned int thread_num, unsigned int service_mod);
 	~IOServiceAgent();
 	int init(unsigned int thread_num=1, unsigned int service_mod=5);
+	void joinAll();
 	boost::asio::io_service& getIOService();
 private:
 	unsigned int thread_num_;

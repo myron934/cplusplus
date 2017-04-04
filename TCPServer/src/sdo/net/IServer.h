@@ -5,12 +5,12 @@
  *      Author: myron
  */
 
-#ifndef ISERVER_H_
-#define ISERVER_H_
+#ifndef SDO_NET_ISERVER_H_
+#define SDO_NET_ISERVER_H_
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
-#include "Connection.h"
-#include "IOServiceAgent.h"
+#include <sdo/net/Connection.h>
+#include <sdo/net/IOServiceAgent.h>
 using namespace boost::asio;
 namespace sdo {
 namespace net {

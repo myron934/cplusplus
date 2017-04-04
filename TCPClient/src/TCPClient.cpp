@@ -14,7 +14,7 @@
 using namespace std;
 using namespace sdo::net;
 size_t readProgressHandler(const char* data, size_t bytes) {
-    LOG_ENTER_FUNCTION
+//    LOG_ENTER_FUNCTION
     bool found = std::find(data, data + bytes, '\n') < data + bytes;
     // we read one-by-one until we get to enter, no buffering
     return found ? 0 : 1;
@@ -39,7 +39,7 @@ void connectionCloseHandler(boost::shared_ptr<Connection> conn, const boost::sys
 void connectionCompleteHandler(boost::shared_ptr<Connection> conn, const boost::system::error_code& ec){
     LOG_ENTER_FUNCTION
     if(ec){
-        cout<<"error"<<endl;
+        std::cout<<"value:"<<ec.value()<<"msg:"<<ec.message()<<std::endl;
         return;
     }
     string data="hello server\n";
@@ -49,7 +49,7 @@ void connectionCompleteHandler(boost::shared_ptr<Connection> conn, const boost::
 int main() {
     boost::shared_ptr<IOServiceAgent> io_agent(new IOServiceAgent);
     io_agent->init(1,5);
-    boost::shared_ptr<Connection> conn=Connection::newInstance(0,'c',io_agent->getIOService(),1);
+    boost::shared_ptr<Connection> conn=Connection::newInstance(0,'c',io_agent->getIOService(),2000);
     conn->setConnectionCompleteHandler(boost::bind(connectionCompleteHandler,_1,_2));
     conn->setConnectionClosedHandler(boost::bind(connectionCloseHandler,_1,_2));
     conn->setReadProcessHandler(boost::bind(readProgressHandler,_1,_2));
@@ -58,9 +58,7 @@ int main() {
     std::ostream os(sb.get());
     os << "heart\n";
     conn->setHeartPacket(sb);
-    conn->asyncConnect("www.abc.cn","https",1);
-    while(true){
-
-    }
+    conn->asyncConnect("127.0.0.1",8081,1000);
+    io_agent->joinAll();
 	return 0;
 }

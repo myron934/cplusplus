@@ -5,7 +5,7 @@
  *      Author: myron
  */
 
-#include "IServer.h"
+#include <sdo/net/IServer.h>
 #include <iostream>
 namespace sdo {
 namespace net {

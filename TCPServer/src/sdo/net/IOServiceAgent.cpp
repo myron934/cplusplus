@@ -4,9 +4,9 @@
  *  Created on: 2017年1月20日
  *      Author: myron
  */
-#include "IOServiceAgent.h"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
+#include <sdo/net/IOServiceAgent.h>
 
 using namespace boost::asio;
 namespace sdo {
@@ -26,6 +26,7 @@ IOServiceAgent::IOServiceAgent(unsigned int thread_num, unsigned int service_mod
 
 
 IOServiceAgent::~IOServiceAgent() {
+    threads_.interrupt_all();
 	for(int i=io_service_num_-1;i>=0;--i){
 		io_services_[i].stop();
 		delete works_[i];
@@ -59,6 +60,12 @@ int IOServiceAgent::init(unsigned int thread_num, unsigned int service_mod) {
 
 	return 0;
 }
+
+void IOServiceAgent::joinAll() {
+    if(threads_.size()>0)
+        threads_.join_all();
+}
+
 /**
  * 获取一个io_service. 如果有多个io_service,则采用轮循的方式取
  * @return io_service的引用
@@ -70,3 +77,5 @@ boost::asio::io_service& IOServiceAgent::getIOService() {
 }
 } /* namespace sdo */
 } /* namespace com */
+
+

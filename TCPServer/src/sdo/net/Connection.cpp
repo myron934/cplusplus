@@ -5,13 +5,13 @@
  *      Author: myron
  */
 
-#include "Connection.h"
 #include <sstream>
 #include <cstring>
 #include <boost/bind.hpp>
-#include <sdo/log/LogHelper.h>
 #include <iostream>
 #include <boost/thread/lock_guard.hpp>
+#include <sdo/log/LogHelper.h>
+#include <sdo/net/Connection.h>
 namespace sdo {
 namespace net {
 Connection::~Connection(){
@@ -28,6 +28,12 @@ int Connection::asyncConnect(const std::string& ip,
 		const unsigned int port, unsigned int time_out_millisec) {
 	boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address::from_string(ip),port);
 	socket_.async_connect(ep,boost::bind(&Connection::onConnectedByIp,shared_from_this(),boost::asio::placeholders::error));
+	timer_.expires_from_now(boost::posix_time::millisec(time_out_millisec));
+    timer_.async_wait(boost::bind(&Connection::onConnectTimeout,shared_from_this(),_1));
+    {
+        boost::mutex::scoped_lock lock(mtx_);
+        time_out_=false;
+    }
 	return 0;
 }
 
@@ -55,8 +61,6 @@ int Connection::asyncConnect(const std::string& address,
 		boost::function<void(boost::shared_ptr<Connection>,	const boost::system::error_code&)>& handler, unsigned int time_out_millisec) {
 	connection_complete_handler_=handler;
 	asyncConnect(address,service,time_out_millisec);
-	timer_.expires_from_now(boost::posix_time::millisec(time_out_millisec));
-    timer_.async_wait(boost::bind(&Connection::onConnectTimeout,shared_from_this(),_1));
 	return 0;
 }
 
@@ -69,9 +73,13 @@ int Connection::asyncConnect(const std::string& address,
 		const std::string& service, unsigned int time_out_millisec) {
     LOG_ENTER_FUNCTION
 	ip::tcp::resolver::query query(address,service);
-	resolver_.async_resolve(query,boost::bind(&Connection::onResolved, shared_from_this(),boost::asio::placeholders::error,placeholders::iterator));
+	resolver_.async_resolve(query,boost::bind(&Connection::onResolved, shared_from_this(),boost::asio::placeholders::error,placeholders::iterator,time_out_millisec));
 	timer_.expires_from_now(boost::posix_time::millisec(time_out_millisec));
     timer_.async_wait(boost::bind(&Connection::onConnectTimeout,shared_from_this(),_1));
+    {
+        boost::mutex::scoped_lock lock(mtx_);
+        time_out_=false;
+    }
 	return 0;
 }
 
@@ -83,10 +91,14 @@ void Connection::onConnectTimeout(const boost::system::error_code& ec) {
     LOG_ENTER_FUNCTION
     //timer正常执行,说明超时
     if(!ec){
+        {
+            boost::mutex::scoped_lock lock(mtx_);
+            time_out_=true;
+        }
         boost::system::error_code  err;
-        resolver_.cancel();
         socket_.close(err);
-        err.assign(boost::asio::error::timed_out,boost::system::system_category());
+        err=boost::asio::error::make_error_code(boost::asio::error::timed_out);
+//        err.assign(boost::asio::error::timed_out,boost::system::system_category());
         if(!connection_complete_handler_.empty()){
             connection_complete_handler_(shared_from_this(),err);
         }
@@ -96,12 +108,18 @@ void Connection::onConnectTimeout(const boost::system::error_code& ec) {
 /**
  * 解析网址/域名的
  */
-void Connection::onResolved(const boost::system::error_code& ec, ip::tcp::resolver::iterator it){
+void Connection::onResolved(const boost::system::error_code& ec, ip::tcp::resolver::iterator it,unsigned int time_out_millisec){
     LOG_ENTER_FUNCTION
+    {
+        boost::mutex::scoped_lock lock(mtx_);
+        if(time_out_) return;
+    }
 	if(!ec){
-		socket_.async_connect(*it,boost::bind(&Connection::onConnectedByAddr,shared_from_this(),boost::asio::placeholders::error,++it));
+	    ip::tcp::endpoint ep = *it;
+	    std::cout<<ep.address().to_string()<<":"<<ep.port()<<std::endl;
+		socket_.async_connect(ep,boost::bind(&Connection::onConnectedByAddr,shared_from_this(),boost::asio::placeholders::error,++it));
 	}
-	else{
+	else if(boost::system::errc::operation_canceled!=ec.value()){
 		if(!connection_complete_handler_.empty()){
 			connection_complete_handler_(shared_from_this(),ec);
 		}
@@ -115,6 +133,10 @@ void Connection::onConnectedByIp(const boost::system::error_code& ec) {
     LOG_ENTER_FUNCTION
     boost::system::error_code err;
     timer_.cancel(err);
+    {
+        boost::mutex::scoped_lock lock(mtx_);
+        if(time_out_) return;
+    }
 	if(!ec){
 		start();
 	}
@@ -130,6 +152,10 @@ void Connection::onConnectedByAddr(const boost::system::error_code& ec, ip::tcp:
     LOG_ENTER_FUNCTION
     boost::system::error_code err;
     timer_.cancel(err);
+    {
+        boost::mutex::scoped_lock lock(mtx_);
+        if(time_out_) return;
+    }
 	if(!ec){
 		start();
 		if(!connection_complete_handler_.empty()){
@@ -139,7 +165,8 @@ void Connection::onConnectedByAddr(const boost::system::error_code& ec, ip::tcp:
 	else if(it!=ip::tcp::resolver::iterator()){
 		boost::system::error_code ignore_ec;
 		socket_.close(ignore_ec);
-		socket_.async_connect(*it,boost::bind(&Connection::onConnectedByAddr,shared_from_this(),boost::asio::placeholders::error,++it));
+		ip::tcp::endpoint ep = *it;
+		socket_.async_connect(ep,boost::bind(&Connection::onConnectedByAddr,shared_from_this(),boost::asio::placeholders::error,++it));
 	}
 	else if(!connection_complete_handler_.empty()){
 		connection_complete_handler_(shared_from_this(),ec);
@@ -280,10 +307,6 @@ void Connection::doCheckPing() {
 void Connection::onCheckPing(const boost::system::error_code& ec) {
 	LOG_ENTER_FUNCTION
 	if (ec){
-		stop();
-		if(!connection_closed_handler_.empty()){
-			connection_closed_handler_(shared_from_this(),ec);
-		}
 		return;
 	}
 	boost::posix_time::ptime now=boost::posix_time::microsec_clock::local_time();
@@ -295,7 +318,7 @@ void Connection::onCheckPing(const boost::system::error_code& ec) {
         stop();
 		return;
 	}
-	else if(NULL!=heart_packet_.get()){//作为客户端,则定时发送心跳
+	else if('c'==connection_type_&&NULL!=heart_packet_.get()){//作为客户端,则定时发送心跳
 	    const char* heart_packet=buffer_cast<const char*>(heart_packet_->data());
         doWrite(heart_packet,heart_packet_->size());
     }

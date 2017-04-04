@@ -5,8 +5,8 @@
  *      Author: myron
  */
 
-#ifndef CONNECTION_H_
-#define CONNECTION_H_
+#ifndef SDO_NET_CONNECTION_H_
+#define SDO_NET_CONNECTION_H_
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/function.hpp>
@@ -68,7 +68,7 @@ public:
 	}
 
 private:
-	Connection(int id,char conn_type,io_service& service,unsigned int time_out_millisec=10000):conn_id_(id),connection_type_(conn_type),started_(0),socket_(service),timer_(service),time_out_millisec_(time_out_millisec),port_(0),resolver_(service){}
+	Connection(int id,char conn_type,io_service& service,unsigned int time_out_millisec=10000):conn_id_(id),connection_type_(conn_type),started_(0),socket_(service),timer_(service),time_out_millisec_(time_out_millisec),port_(0),resolver_(service),time_out_(false){}
 	int doRead();
 	void onRead(const boost::system::error_code& ec, size_t bytes);
 	void onWrite(const boost::system::error_code& ec, size_t bytes);
@@ -78,7 +78,7 @@ private:
 	void onConnectTimeout(const boost::system::error_code& ec);
 	void onConnectedByIp(const boost::system::error_code& ec);
 	void onConnectedByAddr(const boost::system::error_code& ec, ip::tcp::resolver::iterator it);
-	void onResolved(const boost::system::error_code& ec, ip::tcp::resolver::iterator it);
+	void onResolved(const boost::system::error_code& ec, ip::tcp::resolver::iterator it, unsigned int time_out_millisec);
 
 	int conn_id_;//每个connection都有一个id
 	char connection_type_;//服务端连接:s 客户端连接: c
@@ -98,6 +98,7 @@ private:
 	std::string ip_;
 	unsigned int port_;
 	ip::tcp::resolver resolver_;
+	bool time_out_;//在尝试连接时, 用来记录连接是否已经超时,如果超时,在resolver完成以后,将不再执行后续操作
 };
 
 } /* namespace net */
