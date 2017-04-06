@@ -23,6 +23,7 @@ public:
 	int asyncConnect(const std::string& ip, const unsigned int port,boost::function<void (boost::shared_ptr<Connection>, const boost::system::error_code&)>& handler, unsigned int time_out_millisec=10000);
 	int asyncConnect(const std::string& address, const std::string& service, unsigned int time_out_millisec=10000);
 	int asyncConnect(const std::string& address, const std::string& service, boost::function<void (boost::shared_ptr<Connection>, const boost::system::error_code&)>& handler, unsigned int time_out_millisec=10000);
+	int asyncReConnect(unsigned int time_out_millisec=10000);
 	int start();
 	int stop();
 	ip::tcp::socket& getSocket(){return socket_;}

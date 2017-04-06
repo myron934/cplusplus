@@ -84,6 +84,15 @@ int Connection::asyncConnect(const std::string& address,
 }
 
 /**
+ * 断线重连
+ */
+int Connection::asyncReConnect(unsigned int time_out_millisec) {
+    if(socket_.is_open()) return -1;
+    if(ip_.empty()) return -2;
+    return asyncConnect(ip_,port_,time_out_millisec);
+}
+
+/**
  * 调用asyncConnect超时后调用
  * 如果超时没连上,则主动关闭socket
  */
@@ -187,7 +196,7 @@ int Connection::start() {
 	boost::system::error_code ec;
 	boost::asio::ip::tcp::endpoint ep = socket_.remote_endpoint(ec);
 	if (ec){
-		ip_="";
+		ip_.clear();
 		port_=0;
 	}
 	else{
@@ -311,6 +320,7 @@ void Connection::onCheckPing(const boost::system::error_code& ec) {
 	}
 	boost::posix_time::ptime now=boost::posix_time::microsec_clock::local_time();
 	//超时以后,如果是服务端链接,且长时间没有收到客户端数据,会主动断开链接;如果是客户端链接,则会主动发心跳包
+	std::cout<<(now-last_ping_).total_milliseconds()<<std::endl;
 	if('s'==connection_type_&&(now-last_ping_).total_milliseconds()>=time_out_millisec_){
         if(!connection_closed_handler_.empty()){
             connection_closed_handler_(shared_from_this(),ec);

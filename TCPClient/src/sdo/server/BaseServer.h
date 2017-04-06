@@ -5,8 +5,8 @@
  *      Author: weiminglun.myron
  */
 
-#ifndef SDO_EXAMPLES_BASESERVER_H_
-#define SDO_EXAMPLES_BASESERVER_H_
+#ifndef SDO_SERVER_BASESERVER_H_
+#define SDO_SERVER_BASESERVER_H_
 #include <sdo/net/IServer.h>
 using sdo::net::IServer;
 using sdo::net::IOServiceAgent;
@@ -35,4 +35,4 @@ public:
 } /* namespace server */
 } /* namespace sdo */
 
-#endif /* SDO_EXAMPLES_BASESERVER_H_ */
+#endif /* SDO_SERVER_BASESERVER_H_ */

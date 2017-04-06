@@ -5,7 +5,7 @@
  *      Author: weiminglun.myron
  */
 
-#include <sdo/examples/BaseServer.h>
+#include <sdo/server/BaseServer.h>
 #include <sstream>
 #include <iostream>
 namespace sdo {

@@ -84,6 +84,15 @@ int Connection::asyncConnect(const std::string& address,
 }
 
 /**
+ * 断线重连
+ */
+int Connection::asyncReConnect(unsigned int time_out_millisec) {
+    if(socket_.is_open()) return -1;
+    if(ip_.empty()) return -2;
+    return asyncConnect(ip_,port_,time_out_millisec);
+}
+
+/**
  * 调用asyncConnect超时后调用
  * 如果超时没连上,则主动关闭socket
  */
@@ -187,7 +196,7 @@ int Connection::start() {
 	boost::system::error_code ec;
 	boost::asio::ip::tcp::endpoint ep = socket_.remote_endpoint(ec);
 	if (ec){
-		ip_="";
+		ip_.clear();
 		port_=0;
 	}
 	else{
