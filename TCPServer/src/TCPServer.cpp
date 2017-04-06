@@ -18,7 +18,7 @@ int main() {
 	boost::shared_ptr<IOServiceAgent> io_agent(new IOServiceAgent);
 	io_agent->init(1,5);
 	io_service io_ser;
-	sdo::server::ProtoBufServer server(io_agent,8081,10000);
+	sdo::server::ProtoBufServer server(io_agent,8081,20000);
 	if(0!=server.start()){
 	    cout<<"启动失败"<<endl;
 	    return -1;
